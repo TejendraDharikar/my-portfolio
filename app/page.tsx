@@ -9,10 +9,9 @@ const fadeInUp: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 80 }, // ✅ "spring" is valid
+    transition: { type: "spring", stiffness: 80 }, 
   },
 };
-
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -55,7 +54,7 @@ export default function Home() {
             transition={{ delay: 0.5 }}
             className="text-3xl font-extrabold text-blue-600 tracking-wide"
           >
-            Tejendra
+            Tejendra Dharikar
           </motion.h1>
           <motion.ul
             variants={staggerContainer}
@@ -63,49 +62,56 @@ export default function Home() {
             animate="visible"
             className="flex space-x-10 text-lg font-medium"
           >
-            {["Intro", "Skills", "Experience", "Projects", "Contact"].map((item, i) => (
-              <motion.li key={i} variants={fadeInUp}>
-                <a href={`#${item.toLowerCase()}`} className="relative group">
-                  {item}
-                  <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
-                </a>
-              </motion.li>
-            ))}
+            {["Intro", "Skills", "Experience", "Projects", "Contact"].map(
+              (item, i) => (
+                <motion.li key={i} variants={fadeInUp}>
+                  <a href={`#${item.toLowerCase()}`} className="relative group">
+                    {item}
+                    <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  </a>
+                </motion.li>
+              ),
+            )}
           </motion.ul>
         </div>
       </motion.nav>
 
-      {/* Intro Section */}
-      <section
-        id="intro"
-        className="h-screen flex flex-col justify-center items-center text-center px-6 bg-gradient-to-r from-blue-50 to-blue-100"
-      >
-        <motion.h2
-          variants={fadeInUp}
-          initial="hidden"
-          animate="visible"
-          className="text-7xl font-extrabold mb-6 text-blue-700"
-        >
-          Hi, I'm Tejendra 👋
-        </motion.h2>
-        <motion.p
-          variants={fadeInUp}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 0.5 }}
-          className="text-2xl max-w-4xl leading-relaxed text-gray-700"
-        >
-          Full‑Stack Developer skilled in MERN, Prisma, React Query, Zod, TypeScript, Next.js, TailwindCSS, MySQL, and MongoDB. Currently interning at{" "}
-          <span className="font-semibold text-blue-600">SkillPrompt</span>.
-        </motion.p>
-        <motion.a
-          whileHover={{ scale: 1.1, rotate: 2 }}
-          href="#contact"
-          className="mt-10 px-10 py-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition text-lg"
-        >
-          Get in Touch
-        </motion.a>
-      </section>
+   {/* Intro Section */}
+<section
+  id="intro"
+  className="h-screen flex flex-col justify-center items-center text-center px-6 bg-gradient-to-r from-blue-50 to-blue-100"
+>
+  <motion.h2
+    variants={fadeInUp}
+    initial="hidden"
+    animate="visible"
+    className="text-7xl font-extrabold mb-6 text-blue-700"
+  >
+    Hi, I'm Tejendra
+  </motion.h2>
+  <motion.p
+    variants={fadeInUp}
+    initial="hidden"
+    animate="visible"
+    transition={{ delay: 0.5 }}
+    className="text-2xl max-w-4xl leading-relaxed text-gray-700"
+  >
+    A passionate developer who loves blending design and technology to create
+    engaging digital experiences. I enjoy working on frontend integration and
+designing clean, user-friendly interfaces, but my true strength lies in
+backend development — building scalable systems, designing APIs, and managing
+databases. Currently interning at{" "}
+    <span className="font-semibold text-blue-600">SkillPrompt</span>, where I’m
+    learning, growing, and contributing to meaningful work.
+  </motion.p>
+  <motion.a
+    whileHover={{ scale: 1.1, rotate: 2 }}
+    href="#contact"
+    className="mt-10 px-10 py-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition text-lg"
+  >
+    Get in Touch
+  </motion.a>
+</section>
 
       {/* Skills Section */}
       <section id="skills" className="py-40 bg-white">
@@ -125,9 +131,24 @@ export default function Home() {
             className="grid md:grid-cols-3 gap-10 text-lg"
           >
             {[
-              { title: "Frontend", items: ["React.js", "Next.js", "TypeScript", "TailwindCSS"] },
-              { title: "Backend", items: ["Node.js & Express.js", "Prisma ORM", "Zod Validation", "REST APIs"] },
-              { title: "Databases & Tools", items: ["MongoDB", "MySQL", "React Query", "Git & GitHub"] },
+              {
+                title: "Frontend",
+                items: ["React.js", "Next.js", "TypeScript", "TailwindCSS","Zustand","Next.js","React Hook Form"],
+              },
+              {
+                title: "Backend",
+                items: [
+                  "Node.js & Express.js",
+                  "Prisma ORM",
+                  "Zod Validation",
+                  "REST APIs",
+                  "Ts-rest"
+                ],
+              },
+              {
+                title: "Databases & Tools",
+                items: ["MongoDB", "MySQL", "React Query", "Git & GitHub"],
+              },
             ].map((skill, i) => (
               <motion.div
                 key={i}
@@ -147,7 +168,10 @@ export default function Home() {
       </section>
 
       {/* Experience Section */}
-      <section id="experience" className="py-40 bg-gradient-to-r from-gray-100 to-gray-200">
+      <section
+        id="experience"
+        className="py-40 bg-gradient-to-r from-gray-100 to-gray-200"
+      >
         <div className="max-w-6xl mx-auto px-6">
           <motion.h2
             variants={fadeInUp}
@@ -163,9 +187,13 @@ export default function Home() {
             whileInView="visible"
             className="bg-white p-10 rounded-xl shadow hover:shadow-2xl transition hover:-translate-y-2"
           >
-            <h3 className="text-2xl font-semibold mb-2">Internship at SkillPrompt</h3>
+            <h3 className="text-2xl font-semibold mb-2">
+              Internship at SkillPrompt
+            </h3>
             <p className="text-gray-600 text-lg">
-              Working as a Full‑Stack Developer Intern, contributing to real‑world projects, debugging backend/frontend mismatches, and refining contract schemas for type safety and runtime validation.
+              Working as a Full‑Stack Developer Intern, contributing to
+              real‑world projects, debugging backend/frontend mismatches, and
+              refining contract schemas for type safety and runtime validation.
             </p>
           </motion.div>
         </div>
@@ -189,10 +217,22 @@ export default function Home() {
             className="grid md:grid-cols-2 lg:grid-cols-3 gap-12"
           >
             {[
-              { title: "UniHub", desc: "A platform for university students to collaborate and share resources." },
-              { title: "Todo App", desc: "Task management app with CRUD functionality and persistent storage." },
-              { title: "Campus Mate", desc: "Campus networking app for students and faculty." },
-              { title: "Chautari", desc: "Community discussion platform with authentication and real‑time updates." },
+              {
+                title: "UniHub",
+                desc: "A platform for university students to collaborate and share resources.",
+              },
+              {
+                title: "Todo App",
+                desc: "Task management app with CRUD functionality and persistent storage.",
+              },
+              {
+                title: "Campus Mate",
+                desc: "Campus networking app for students and faculty.",
+              },
+              {
+                title: "Chautari",
+                desc: "Community discussion platform with authentication and real‑time updates.",
+              },
             ].map((proj, i) => (
               <motion.div
                 key={i}
@@ -207,8 +247,7 @@ export default function Home() {
         </div>
       </section>
 
-
-           {/* Contact Section */}
+      {/* Contact Section */}
       <section id="contact" className="py-40 bg-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <motion.h2
@@ -225,7 +264,8 @@ export default function Home() {
             whileInView="visible"
             className="mb-12 text-xl text-gray-700"
           >
-            Let’s collaborate! Reach out for projects, internships, or opportunities.
+            Let’s collaborate! Reach out for projects or
+            opportunities.
           </motion.p>
           <motion.div
             variants={staggerContainer}
@@ -236,7 +276,7 @@ export default function Home() {
             <motion.a
               variants={fadeInUp}
               whileHover={{ scale: 1.2, rotate: 5 }}
-              href="mailto:tejendra@example.com"
+              href="mailto:tejendradharikar@gmail.com"
               className="p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition"
             >
               <FaEnvelope size={28} />
@@ -244,7 +284,7 @@ export default function Home() {
             <motion.a
               variants={fadeInUp}
               whileHover={{ scale: 1.2, rotate: -5 }}
-              href="https://github.com/tejendra"
+              href="https://github.com/TejendraDharikar"
               target="_blank"
               rel="noopener noreferrer"
               className="p-4 bg-gray-800 text-white rounded-full shadow-lg hover:bg-black transition"
@@ -254,7 +294,7 @@ export default function Home() {
             <motion.a
               variants={fadeInUp}
               whileHover={{ scale: 1.2, rotate: 5 }}
-              href="https://linkedin.com/in/tejendra"
+              href="https://www.linkedin.com/in/tejendra-dharikar/"
               target="_blank"
               rel="noopener noreferrer"
               className="p-4 bg-blue-700 text-white rounded-full shadow-lg hover:bg-blue-800 transition"
@@ -273,14 +313,30 @@ export default function Home() {
           transition={{ duration: 1 }}
           className="flex justify-center space-x-8 mb-6"
         >
-          <a href="mailto:tejendra@example.com" className="hover:text-white transition">
+          <a
+            href="mailto:tejendradharikar@gmail.com"
+            className="hover:text-white transition"
+          >
             <FaEnvelope size={24} />
+            {}
           </a>
-          <a href="https://github.com/tejendra" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+          <a
+            href="https://github.com/TejendraDharikar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white transition"
+          >
             <FaGithub size={24} />
+            {}
           </a>
-          <a href="https://linkedin.com/in/tejendra" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+          <a
+            href="https://www.linkedin.com/in/tejendra-dharikar/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white transition"
+          >
             <FaLinkedin size={24} />
+            {}
           </a>
         </motion.div>
         <motion.p
@@ -289,7 +345,8 @@ export default function Home() {
           transition={{ duration: 1 }}
           className="text-lg"
         >
-          © {new Date().getFullYear()} Tejendra. Crafted with ❤️ using Next.js & TailwindCSS.
+          © {new Date().getFullYear()} Tejendra. Crafted with ❤️ using Next.js &
+          TailwindCSS.
         </motion.p>
       </footer>
     </div>
