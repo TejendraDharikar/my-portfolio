@@ -62,7 +62,7 @@ export default function Home() {
             animate="visible"
             className="flex space-x-10 text-lg font-medium"
           >
-            {["Intro", "Skills", "Experience", "Projects", "Contact"].map(
+            {["Me", "Skills", "Experience", "Projects", "Contact"].map(
               (item, i) => (
                 <motion.li key={i} variants={fadeInUp}>
                   <a href={`#${item.toLowerCase()}`} className="relative group">
@@ -78,7 +78,7 @@ export default function Home() {
 
    {/* Intro Section */}
 <section
-  id="intro"
+  id="me"
   className="h-screen flex flex-col justify-center items-center text-center px-6 bg-gradient-to-r from-blue-50 to-blue-100"
 >
   <motion.h2
@@ -133,7 +133,7 @@ databases. Currently interning at{" "}
             {[
               {
                 title: "Frontend",
-                items: ["React.js", "Next.js", "TypeScript", "TailwindCSS","Zustand","Next.js","React Hook Form"],
+                items: ["React.js", "Next.js", "TypeScript", "TailwindCSS","React Query","Zustand","React Hook Form"],
               },
               {
                 title: "Backend",
@@ -147,7 +147,7 @@ databases. Currently interning at{" "}
               },
               {
                 title: "Databases & Tools",
-                items: ["MongoDB", "MySQL", "React Query", "Git & GitHub"],
+                items: ["MongoDB", "MySQL","Git & GitHub"],
               },
             ].map((skill, i) => (
               <motion.div
@@ -158,7 +158,7 @@ databases. Currently interning at{" "}
                 <h3 className="text-xl font-semibold mb-4">{skill.title}</h3>
                 <ul className="space-y-2">
                   {skill.items.map((item, j) => (
-                    <li key={j}>⚡ {item}</li>
+                    <li key={j}> - {item}</li>
                   ))}
                 </ul>
               </motion.div>
