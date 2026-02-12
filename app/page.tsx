@@ -192,8 +192,7 @@ databases. Currently interning at{" "}
             </h3>
             <p className="text-gray-600 text-lg">
               Working as a Full‑Stack Developer Intern, contributing to
-              real‑world projects, debugging backend/frontend mismatches, and
-              refining contract schemas for type safety and runtime validation.
+              real‑world projects, learning real-world workflows, adding value , gaining advanced and refined knowledge .
             </p>
           </motion.div>
         </div>
