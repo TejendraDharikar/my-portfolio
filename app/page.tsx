@@ -1,7 +1,9 @@
 "use client";
 
 import { motion, Variants } from "framer-motion";
+import { useState } from "react";
 import { FaGithub, FaLinkedin, FaEnvelope } from "react-icons/fa";
+import { FiMenu, FiX } from "react-icons/fi";
 
 // Animation Variants
 const fadeInUp: Variants = {
@@ -22,6 +24,8 @@ const staggerContainer = {
 };
 
 export default function Home() {
+   const [isOpen, setIsOpen] = useState(false);
+
   return (
     <div className="font-sans bg-gradient-to-br from-blue-50 via-white to-blue-100 text-gray-800 min-h-screen relative overflow-hidden">
       {/* Animated Background Blobs */}
@@ -41,40 +45,70 @@ export default function Home() {
       </div>
 
       {/* Navbar */}
-      <motion.nav
-        initial={{ y: -80 }}
-        animate={{ y: 0 }}
-        transition={{ type: "spring", stiffness: 80 }}
-        className="fixed top-0 left-0 w-full backdrop-blur-md bg-white/70 shadow-lg z-50"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-3xl font-extrabold text-blue-600 tracking-wide"
-          >
-            Tejendra Dharikar
-          </motion.h1>
-          <motion.ul
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="flex space-x-10 text-lg font-medium"
-          >
-            {["Me", "Skills", "Experience", "Projects", "Contact"].map(
-              (item, i) => (
-                <motion.li key={i} variants={fadeInUp}>
-                  <a href={`#${item.toLowerCase()}`} className="relative group">
-                    {item}
-                    <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
-                  </a>
-                </motion.li>
-              ),
-            )}
-          </motion.ul>
-        </div>
-      </motion.nav>
+ <motion.nav
+      initial={{ y: -80 }}
+      animate={{ y: 0 }}
+      transition={{ type: "spring", stiffness: 80 }}
+      className="fixed top-0 left-0 w-full backdrop-blur-md bg-white/70 shadow-lg z-50"
+    >
+      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <motion.h1
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-3xl font-extrabold text-blue-600 tracking-wide"
+        >
+          Tejendra Dharikar
+        </motion.h1>
+
+        {/* Desktop Menu */}
+        <motion.ul
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="hidden md:flex space-x-10 text-lg font-medium"
+        >
+          {["Me", "Skills", "Experience", "Projects", "Contact"].map((item, i) => (
+            <motion.li key={i} variants={fadeInUp}>
+              <a href={`#${item.toLowerCase()}`} className="relative group">
+                {item}
+                <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+              </a>
+            </motion.li>
+          ))}
+        </motion.ul>
+
+        {/* Mobile Hamburger */}
+        <button
+          className="md:hidden text-3xl text-blue-600"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? <FiX /> : <FiMenu />}
+        </button>
+      </div>
+
+      {/* Sidebar for Mobile */}
+      {isOpen && (
+        <motion.div
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", stiffness: 80 }}
+          className="fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50 flex flex-col items-start p-6 space-y-6"
+        >
+          {["Me", "Skills", "Experience", "Projects", "Contact"].map((item, i) => (
+            <a
+              key={i}
+              href={`#${item.toLowerCase()}`}
+              className="text-lg font-medium text-gray-700 hover:text-blue-600"
+              onClick={() => setIsOpen(false)} // close sidebar after click
+            >
+              {item}
+            </a>
+          ))}
+        </motion.div>
+      )}
+    </motion.nav>
 
    {/* Intro Section */}
 <section
