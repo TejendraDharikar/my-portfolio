@@ -1,6 +1,14 @@
 "use client";
 
-import { motion, useMotionValue, useSpring, useScroll, useVelocity, useTransform, Variants } from "framer-motion";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useScroll,
+  useVelocity,
+  useTransform,
+  Variants,
+} from "framer-motion";
 import { useEffect, useState } from "react";
 import {
   FaGithub,
@@ -10,7 +18,12 @@ import {
   FaFileDownload,
 } from "react-icons/fa";
 import { FiMenu, FiX } from "react-icons/fi";
-import { GiSpiderWeb, GiSpiderMask, GiHangingSpider, GiSpiderBot } from "react-icons/gi";
+import {
+  GiSpiderWeb,
+  GiSpiderMask,
+  GiHangingSpider,
+  GiSpiderBot,
+} from "react-icons/gi";
 import { Bebas_Neue, Inter } from "next/font/google";
 
 const display = Bebas_Neue({
@@ -32,16 +45,19 @@ const fadeInUp: Variants = {
 const swingIn: Variants = {
   hidden: { opacity: 0, rotateZ: -10, y: -40, transformOrigin: "top left" },
   visible: {
-    opacity: 1, rotateZ: 0, y: 0,
-    transition: { type: "spring", damping: 12, stiffness: 100 }
-  }
+    opacity: 1,
+    rotateZ: 0,
+    y: 0,
+    transition: { type: "spring", damping: 12, stiffness: 100 },
+  },
 };
 
 const spiderSense: Variants = {
   hidden: { opacity: 0, x: -40 },
   visible: {
-    opacity: 1, x: 0,
-    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] }
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
   },
   hover: {
     x: [0, -3, 3, -3, 3, 0],
@@ -52,8 +68,8 @@ const spiderSense: Variants = {
       "-2px 0px 8px rgba(193,39,45,0.9), 2px 0px 8px rgba(41,128,185,0.9)",
       "0px 0px 0px rgba(193,39,45,0)",
     ],
-    transition: { duration: 0.4 }
-  }
+    transition: { duration: 0.4 },
+  },
 };
 
 const stagger = {
@@ -142,7 +158,12 @@ function SpidermanSwing() {
       className="fixed -top-10 right-[8%] md:right-[15%] z-0 pointer-events-none origin-top opacity-70 flex flex-col items-center"
       initial={{ rotate: -25 }}
       animate={{ rotate: 25 }}
-      transition={{ duration: 3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+      transition={{
+        duration: 3,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut",
+      }}
     >
       <div className="w-[1.5px] h-[200px] md:h-[350px] bg-white/20" />
       <div className="transform -translate-y-4">
@@ -157,8 +178,13 @@ function HangingSpider() {
     <motion.div
       className="fixed -top-5 left-[5%] md:left-[10%] z-0 pointer-events-none opacity-80 flex flex-col items-center"
       initial={{ y: -400 }}
-      animate={{ y: [ -400, 0, -50, -30, -400 ] }}
-      transition={{ duration: 7, repeat: Infinity, repeatDelay: 12, ease: "easeInOut" }}
+      animate={{ y: [-400, 0, -50, -30, -400] }}
+      transition={{
+        duration: 7,
+        repeat: Infinity,
+        repeatDelay: 12,
+        ease: "easeInOut",
+      }}
     >
       <div className="w-[1px] h-[300px] bg-white/30" />
       <div className="transform -translate-y-1">
@@ -176,7 +202,10 @@ function ScrollWebs() {
   const smoothTopWebY = useSpring(topWebY, { damping: 20, stiffness: 150 });
 
   const bottomWebY = useTransform(scrollVelocity, [-100, -3000], [350, 0]);
-  const smoothBottomWebY = useSpring(bottomWebY, { damping: 20, stiffness: 150 });
+  const smoothBottomWebY = useSpring(bottomWebY, {
+    damping: 20,
+    stiffness: 150,
+  });
 
   return (
     <>
@@ -201,22 +230,38 @@ function ScrollWebs() {
   );
 }
 
-function WebShooter({ direction, delay }: { direction: "top" | "bottom", delay: number }) {
+function WebShooter({
+  direction,
+  delay,
+}: {
+  direction: "top" | "bottom";
+  delay: number;
+}) {
   const heights = ["h-40", "h-56", "h-48"];
   const hClass = heights[delay];
-  
+
   if (direction === "top") {
     return (
       <div className="flex flex-col items-center">
-         <div className={`w-[2px] ${hClass} bg-gradient-to-b from-transparent to-white/60`} />
-         <GiSpiderWeb size={70} className="text-white/60 transform -translate-y-1/2" />
+        <div
+          className={`w-[2px] ${hClass} bg-gradient-to-b from-transparent to-white/60`}
+        />
+        <GiSpiderWeb
+          size={70}
+          className="text-white/60 transform -translate-y-1/2"
+        />
       </div>
     );
   } else {
     return (
       <div className="flex flex-col items-center">
-         <GiSpiderWeb size={70} className="text-white/60 transform translate-y-1/2" />
-         <div className={`w-[2px] ${hClass} bg-gradient-to-b from-white/60 to-transparent`} />
+        <GiSpiderWeb
+          size={70}
+          className="text-white/60 transform translate-y-1/2"
+        />
+        <div
+          className={`w-[2px] ${hClass} bg-gradient-to-b from-white/60 to-transparent`}
+        />
       </div>
     );
   }
@@ -226,10 +271,16 @@ function CornerWebs() {
   return (
     <>
       <div className="fixed top-0 left-0 pointer-events-none opacity-30 -z-10">
-        <GiSpiderWeb size={350} className="text-white/20 transform -translate-x-1/4 -translate-y-1/4" />
+        <GiSpiderWeb
+          size={350}
+          className="text-white/20 transform -translate-x-1/4 -translate-y-1/4"
+        />
       </div>
       <div className="fixed bottom-0 right-0 pointer-events-none opacity-30 -z-10">
-        <GiSpiderWeb size={350} className="text-white/20 transform translate-x-1/4 translate-y-1/4" />
+        <GiSpiderWeb
+          size={350}
+          className="text-white/20 transform translate-x-1/4 translate-y-1/4"
+        />
       </div>
     </>
   );
@@ -254,12 +305,13 @@ export default function Home() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/10 bg-[#0b0b10]/85 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1
+          <a
             className="text-3xl tracking-wide text-[#eae7e2]"
             style={{ fontFamily: "var(--font-display)" }}
+            href="#me"
           >
             TEJENDRA <span className="text-[#c1272d]">DHARIKAR</span>
-          </h1>
+          </a>
 
           <ul className="hidden md:flex space-x-9 text-base">
             {nav.map((item) => (
@@ -341,7 +393,10 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
-            whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px rgba(193,39,45,0.6)" }}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0px 0px 15px rgba(193,39,45,0.6)",
+            }}
             whileTap={{ scale: 0.95 }}
             href="#contact"
             className="inline-block px-8 py-3 border border-[#c1272d] text-[#eae7e2] hover:bg-[#c1272d] transition-colors"
@@ -352,7 +407,10 @@ export default function Home() {
       </section>
 
       {/* Skills */}
-      <section id="skills" className="py-32 border-t border-white/10 px-6 relative overflow-hidden">
+      <section
+        id="skills"
+        className="py-32 border-t border-white/10 px-6 relative overflow-hidden"
+      >
         <motion.div
           initial={{ x: "-10vw", y: 20 }}
           whileInView={{ x: "110vw", y: [20, -10, 30, -5, 20] }}
@@ -361,7 +419,7 @@ export default function Home() {
         >
           <GiSpiderBot size={40} />
         </motion.div>
-        
+
         <div className="max-w-6xl mx-auto relative z-10">
           <motion.h2
             variants={fadeInUp}
@@ -424,9 +482,17 @@ export default function Home() {
                 </h3>
                 <ul className="space-y-3 text-[#c8c6c1]">
                   {skill.items.map((item) => (
-                    <li key={item} className="text-sm flex items-center group/item">
-                      <GiSpiderWeb className="text-[#c1272d]/40 group-hover/item:text-[#c1272d] mr-3 transition-colors" size={14} />
-                      <span className="group-hover/item:text-[#eae7e2] transition-colors">{item}</span>
+                    <li
+                      key={item}
+                      className="text-sm flex items-center group/item"
+                    >
+                      <GiSpiderWeb
+                        className="text-[#c1272d]/40 group-hover/item:text-[#c1272d] mr-3 transition-colors"
+                        size={14}
+                      />
+                      <span className="group-hover/item:text-[#eae7e2] transition-colors">
+                        {item}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -457,7 +523,7 @@ export default function Home() {
               <div className="absolute top-6 -left-[2.8rem] md:-left-[3.8rem] w-10 h-10 bg-[#0b0b10] rounded-full flex items-center justify-center text-[#c1272d] border border-white/20 z-10 shadow-[0_0_15px_rgba(193,39,45,0.3)]">
                 <GiSpiderWeb size={20} />
               </div>
-              
+
               {/* Connecting Web Line */}
               <div className="absolute top-10 -left-[2.8rem] md:-left-[3.8rem] w-[2.8rem] md:w-[3.8rem] h-[1.5px] bg-white/10 z-0" />
 
@@ -473,18 +539,34 @@ export default function Home() {
                 <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-15 transform translate-x-1/2 -translate-y-1/2 scale-50 group-hover:scale-100 transition-all duration-500 pointer-events-none">
                   <GiSpiderWeb size={250} className="text-[#c1272d]" />
                 </div>
-                
+
                 <div className="flex flex-wrap justify-between items-baseline mb-2">
-                  <h3 className="text-2xl text-[#eae7e2]" style={{ fontFamily: "var(--font-display)" }}>
+                  <h3
+                    className="text-2xl text-[#eae7e2]"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
                     Fullstack Developer Intern — SkillPrompt
                   </h3>
-                  <span className="text-[#8b8b93] text-sm tracking-wider">Jun 2026 – Present</span>
+                  <span className="text-[#8b8b93] text-sm tracking-wider">
+                    Jun 2026 – Present
+                  </span>
                 </div>
-                <p className="text-[#c1272d] text-sm italic mb-5 tracking-wide">Project: yourOSHC</p>
+                <p className="text-[#c1272d] text-sm italic mb-5 tracking-wide">
+                  Project: yourOSHC
+                </p>
                 <ul className="text-[#c8c6c1] space-y-3 list-disc list-inside text-sm leading-relaxed">
-                  <li>Built and maintained REST APIs using Express.js and Prisma ORM</li>
-                  <li>Developed new frontend pages and features with Next.js and TypeScript</li>
-                  <li>Identified and fixed bugs across a live production application</li>
+                  <li>
+                    Built and maintained REST APIs using Express.js and Prisma
+                    ORM
+                  </li>
+                  <li>
+                    Developed new frontend pages and features with Next.js and
+                    TypeScript
+                  </li>
+                  <li>
+                    Identified and fixed bugs across a live production
+                    application
+                  </li>
                   <li>Collaborated with a cross-functional development team</li>
                 </ul>
               </motion.div>
@@ -496,7 +578,7 @@ export default function Home() {
               <div className="absolute top-6 -left-[2.8rem] md:-left-[3.8rem] w-10 h-10 bg-[#0b0b10] rounded-full flex items-center justify-center text-[#c1272d] border border-white/20 z-10 shadow-[0_0_15px_rgba(193,39,45,0.3)]">
                 <GiSpiderWeb size={20} />
               </div>
-              
+
               {/* Connecting Web Line */}
               <div className="absolute top-10 -left-[2.8rem] md:-left-[3.8rem] w-[2.8rem] md:w-[3.8rem] h-[1.5px] bg-white/10 z-0" />
 
@@ -512,21 +594,43 @@ export default function Home() {
                 <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-15 transform translate-x-1/2 -translate-y-1/2 scale-50 group-hover:scale-100 transition-all duration-500 pointer-events-none">
                   <GiSpiderWeb size={250} className="text-[#c1272d]" />
                 </div>
-                
+
                 <div className="flex flex-wrap justify-between items-baseline mb-2">
-                  <h3 className="text-2xl text-[#eae7e2]" style={{ fontFamily: "var(--font-display)" }}>
+                  <h3
+                    className="text-2xl text-[#eae7e2]"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
                     Freelance Fullstack Developer
                   </h3>
-                  <span className="text-[#8b8b93] text-sm tracking-wider">Jun 2026</span>
+                  <span className="text-[#8b8b93] text-sm tracking-wider">
+                    Jun 2026
+                  </span>
                 </div>
                 <p className="text-[#c1272d] text-sm italic mb-5 tracking-wide">
                   Client: Manjushree Clinic —{" "}
-                  <a href="https://manjushreeayurvediccenter.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#eae7e2]">manjushreeayurvediccenter.com</a>
+                  <a
+                    href="https://manjushreeayurvediccenter.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-[#eae7e2]"
+                  >
+                    manjushreeayurvediccenter.com
+                  </a>
                 </p>
                 <ul className="text-[#c8c6c1] space-y-3 list-disc list-inside text-sm leading-relaxed">
-                  <li>Independently designed, built, and deployed a full production website with a public site and private admin panel</li>
-                  <li>Built the admin panel with complete CRUD for doctors and appointments</li>
-                  <li>Used TypeScript, Next.js, Express.js, Prisma ORM, and PostgreSQL end-to-end; handled deployment and delivery solo</li>
+                  <li>
+                    Independently designed, built, and deployed a full
+                    production website with a public site and private admin
+                    panel
+                  </li>
+                  <li>
+                    Built the admin panel with complete CRUD for doctors and
+                    appointments
+                  </li>
+                  <li>
+                    Used TypeScript, Next.js, Express.js, Prisma ORM, and
+                    PostgreSQL end-to-end; handled deployment and delivery solo
+                  </li>
                 </ul>
               </motion.div>
             </div>
