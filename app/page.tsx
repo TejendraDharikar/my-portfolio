@@ -11,6 +11,7 @@ import {
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   FaGithub,
+  FaGraduationCap,
   FaLinkedin,
   FaEnvelope,
   FaExternalLinkAlt,
@@ -23,6 +24,7 @@ import {
   FiBox,
   FiBriefcase,
   FiChevronDown,
+  FiCloud,
   FiCode,
   FiMenu,
   FiMoon,
@@ -34,15 +36,18 @@ import {
 import {
   SiExpress,
   SiGithub,
+  SiGnubash,
   SiMongodb,
   SiMysql,
   SiNextdotjs,
   SiNodedotjs,
   SiPostgresql,
+  SiPostman,
   SiPrisma,
   SiReact,
   SiReactquery,
   SiReacthookform,
+  SiReactrouter,
   SiTailwindcss,
   SiTypescript,
   SiZod,
@@ -444,10 +449,10 @@ const heroTech: { name: string; icon: IconType; color: string }[] = [
 ];
 
 const stats: { label: string; value: string; tint: AccentTint }[] = [
-  { label: "Projects shipped", value: "4+", tint: "accent" },
+  { label: "Projects shipped", value: "5+", tint: "accent" },
   { label: "Production client site", value: "1", tint: "accent-2" },
-  { label: "Core technologies", value: "16+", tint: "accent-3" },
-  { label: "Open to", value: "Remote", tint: "accent" },
+  { label: "Promoted to full-time", value: "Jun 2026", tint: "accent-3" },
+  { label: "CSIT, Pokhara University", value: "2027", tint: "accent" },
 ];
 
 const skillCategories: {
@@ -472,7 +477,7 @@ const skillCategories: {
   },
   {
     title: "Backend",
-    description: "APIs and services built to hold up under real traffic.",
+    description: "REST APIs and services for production applications.",
     tint: "accent",
     items: [
       { name: "Node.js", icon: SiNodedotjs, color: "#339933" },
@@ -492,6 +497,9 @@ const skillCategories: {
       { name: "MongoDB", icon: SiMongodb, color: "#47A248" },
       { name: "MySQL", icon: SiMysql, color: "#4479A1" },
       { name: "Git & GitHub", icon: SiGithub, color: "var(--text)" },
+      { name: "AWS", icon: FiCloud, color: "#FF9900" },
+      { name: "Postman", icon: SiPostman, color: "#FF6C37" },
+      { name: "Bash", icon: SiGnubash, color: "var(--text)" },
     ],
   },
 ];
@@ -501,8 +509,8 @@ const experience: {
   org: string;
   type: string;
   icon: IconType;
-  project: string;
-  projectLinkText: string;
+  project?: string;
+  projectLinkText?: string;
   projectHref?: string;
   period: string;
   tint: AccentTint;
@@ -552,11 +560,18 @@ const experience: {
     projectLinkText: "yourOSHC",
     period: "Jan 2026 – May 2026",
     points: [
-      "Onboarded onto the yourOSHC codebase and contributed under senior engineer guidance",
-      "Built UI components with Next.js and TypeScript as part of the frontend team",
-      "Learned REST API development patterns using Express.js and Prisma ORM",
-      "Participated in code reviews and sprint planning",
+      "Completed a structured internship working hands-on with a production-level web application",
+      "Built foundational experience with the team's tech stack and development workflow ahead of transitioning into a paid role",
     ],
+  },
+  {
+    role: "Bachelor of Computer System and Information Technology (CSIT)",
+    org: "Pokhara University, Nepal",
+    type: "Education",
+    icon: FaGraduationCap,
+    tint: "accent",
+    period: "2023 – 2027 (In Progress)",
+    points: [],
   },
 ];
 
@@ -569,6 +584,9 @@ const techIconMap: Record<
   Prisma: { icon: SiPrisma, color: "var(--text)" },
   PostgreSQL: { icon: SiPostgresql, color: "#4169E1" },
   TypeScript: { icon: SiTypescript, color: "#3178C6" },
+  "TanStack Query": { icon: SiReactquery, color: "#FF4154" },
+  "Tailwind CSS": { icon: SiTailwindcss, color: "#06B6D4" },
+  "React Router": { icon: SiReactrouter, color: "#CA4245" },
 };
 
 const projects = [
@@ -597,6 +615,13 @@ const projects = [
     title: "UniHub",
     desc: "Platform for university students to collaborate and share resources.",
     stack: ["TypeScript"],
+    live: null as string | null,
+    github: null as string | null,
+  },
+  {
+    title: "E-Commerce Storefront",
+    desc: "CRUD storefront application with product browsing, cart, and data-fetching handled through TanStack Query.",
+    stack: ["TypeScript", "TanStack Query", "Tailwind CSS", "React Router"],
     live: null as string | null,
     github: null as string | null,
   },
@@ -837,10 +862,11 @@ export default function Home() {
             transition={{ delay: 0.45, duration: 0.6 }}
             className="text-lg md:text-xl max-w-xl text-[var(--text-secondary)] leading-relaxed mb-10"
           >
-            I work across TypeScript, Next.js, Express.js, PrismaORM, MySQL and
-            PostgreSQL — building APIs and interfaces that stay solid under real
-            traffic. I&apos;ve shipped a full production site for a paying
-            client, and I currently build features at SkillPrompt.
+            I work across TypeScript, Next.js, Express.js, Prisma ORM, MySQL and
+            PostgreSQL — building APIs and interfaces for products real users
+            rely on. I&apos;ve shipped a full production site for a paying
+            client, and I currently build backend and frontend features on a
+            live product at SkillPrompt.
           </motion.p>
 
           <motion.div
@@ -1007,7 +1033,7 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-sm tracking-widest uppercase text-[var(--accent)] mb-3"
           >
-            Where I&apos;ve worked
+            Where I&apos;ve worked &amp; studied
           </motion.p>
           <motion.h2
             variants={fadeInUp}
@@ -1103,26 +1129,28 @@ export default function Home() {
                           {job.period}
                         </span>
                       </div>
-                      <p
-                        className="text-sm italic mb-5 tracking-wide"
-                        style={{ color: `var(--${job.tint})` }}
-                      >
-                        {job.projectHref ? (
-                          <>
-                            {job.project}:{" "}
-                            <a
-                              href={job.projectHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="underline hover:text-[var(--text)]"
-                            >
-                              {job.projectLinkText}
-                            </a>
-                          </>
-                        ) : (
-                          `${job.project}: ${job.projectLinkText}`
-                        )}
-                      </p>
+                      {job.project && (
+                        <p
+                          className="text-sm italic mb-5 tracking-wide"
+                          style={{ color: `var(--${job.tint})` }}
+                        >
+                          {job.projectHref ? (
+                            <>
+                              {job.project}:{" "}
+                              <a
+                                href={job.projectHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline hover:text-[var(--text)]"
+                              >
+                                {job.projectLinkText}
+                              </a>
+                            </>
+                          ) : (
+                            `${job.project}: ${job.projectLinkText}`
+                          )}
+                        </p>
+                      )}
                       <ul className="text-[var(--text-secondary)] space-y-3 list-disc list-inside text-sm leading-relaxed">
                         {job.points.map((point) => (
                           <li key={point}>{point}</li>
