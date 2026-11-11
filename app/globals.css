@@ -5,3 +5,151 @@
 html {
   scroll-behavior: smooth;
 }
+
+:root,
+[data-theme="dark"] {
+  --bg: #0a0e16;
+  --surface: rgba(20, 24, 36, 0.92);
+  --surface-2: rgba(255, 255, 255, 0.05);
+  --surface-solid: #141924;
+  --nav-bg: rgba(10, 14, 22, 0.75);
+  --text: #f1f3f9;
+  --text-secondary: #b7bdd0;
+  --text-muted: #7d8398;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
+  /* One accent hue (indigo) in three tonal shades — no competing colors */
+  --accent: #818cf8;
+  --accent-2: #6366f1;
+  --accent-3: #4338ca;
+
+  --accent-soft: rgba(129, 140, 248, 0.18);
+  --accent-2-soft: rgba(99, 102, 241, 0.18);
+  --accent-3-soft: rgba(67, 56, 202, 0.2);
+  --accent-soft-strong: rgba(99, 102, 241, 0.32);
+}
+
+[data-theme="light"] {
+  --bg: #f6f7fb;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-2: rgba(30, 41, 59, 0.05);
+  --surface-solid: #ffffff;
+  --nav-bg: rgba(246, 247, 251, 0.8);
+  --text: #12151f;
+  --text-secondary: #454a5e;
+  --text-muted: #6b7086;
+  --border: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.16);
+
+  --accent: #4f46e5;
+  --accent-2: #4338ca;
+  --accent-3: #3730a3;
+
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --accent-2-soft: rgba(67, 56, 202, 0.1);
+  --accent-3-soft: rgba(55, 48, 163, 0.08);
+  --accent-soft-strong: rgba(79, 70, 229, 0.22);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+::selection {
+  background-color: var(--accent);
+  color: #ffffff;
+}
+
+/* ---------- Spotlight hover glow for cards ---------- */
+.spotlight-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    560px circle at var(--mx, 50%) var(--my, 50%),
+    var(--accent-soft),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+/* ---------- Infinite tech marquee ---------- */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 24s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* ---------- Shimmer sweep for gradient CTAs ---------- */
+.shimmer-sweep {
+  transform: translateX(-120%) skewX(-15deg);
+  transition: transform 0.75s ease;
+}
+
+.group:hover .shimmer-sweep {
+  transform: translateX(120%) skewX(-15deg);
+}
+
+/* ---------- Slow drifting gradient-text shimmer ---------- */
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* ---------- Tech chip: icon/background color swap on hover ---------- */
+.swap-chip {
+  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+.swap-chip:hover {
+  background-color: var(--chip-fill) !important;
+  border-color: var(--chip-fill) !important;
+  transform: translateY(-1px);
+}
+
+.swap-chip .swap-icon,
+.swap-chip .swap-label {
+  transition: color 0.3s ease;
+}
+
+.swap-chip:hover .swap-icon,
+.swap-chip:hover .swap-label {
+  color: var(--bg) !important;
+}

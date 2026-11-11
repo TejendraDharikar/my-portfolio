@@ -1,15 +1,14 @@
 "use client";
 
 import {
+  AnimatePresence,
   motion,
   useMotionValue,
-  useSpring,
   useScroll,
-  useVelocity,
-  useTransform,
+  useSpring,
   Variants,
 } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   FaGithub,
   FaLinkedin,
@@ -17,13 +16,38 @@ import {
   FaExternalLinkAlt,
   FaFileDownload,
 } from "react-icons/fa";
-import { FiMenu, FiX } from "react-icons/fi";
 import {
-  GiSpiderWeb,
-  GiSpiderMask,
-  GiHangingSpider,
-  GiSpiderBot,
-} from "react-icons/gi";
+  FiArrowUp,
+  FiArrowUpRight,
+  FiBookOpen,
+  FiBox,
+  FiBriefcase,
+  FiChevronDown,
+  FiCode,
+  FiMenu,
+  FiMoon,
+  FiServer,
+  FiSun,
+  FiX,
+  FiZap,
+} from "react-icons/fi";
+import {
+  SiExpress,
+  SiGithub,
+  SiMongodb,
+  SiMysql,
+  SiNextdotjs,
+  SiNodedotjs,
+  SiPostgresql,
+  SiPrisma,
+  SiReact,
+  SiReactquery,
+  SiReacthookform,
+  SiTailwindcss,
+  SiTypescript,
+  SiZod,
+} from "react-icons/si";
+import type { IconType } from "react-icons";
 import { Bebas_Neue, Inter } from "next/font/google";
 
 const display = Bebas_Neue({
@@ -33,6 +57,7 @@ const display = Bebas_Neue({
 });
 const body = Inter({ subsets: ["latin"], variable: "--font-body" });
 
+/* ---------- Motion variants ---------- */
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: {
@@ -42,37 +67,17 @@ const fadeInUp: Variants = {
   },
 };
 
-const swingIn: Variants = {
-  hidden: { opacity: 0, rotateZ: -10, y: -40, transformOrigin: "top left" },
+const riseIn: Variants = {
+  hidden: { opacity: 0, y: 40, scale: 0.98 },
   visible: {
     opacity: 1,
-    rotateZ: 0,
     y: 0,
-    transition: { type: "spring", damping: 12, stiffness: 100 },
+    scale: 1,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
-const spiderSense: Variants = {
-  hidden: { opacity: 0, x: -40 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
-  },
-  hover: {
-    x: [0, -3, 3, -3, 3, 0],
-    textShadow: [
-      "0px 0px 0px rgba(193,39,45,0)",
-      "-2px 0px 8px rgba(193,39,45,0.9), 2px 0px 8px rgba(41,128,185,0.9)",
-      "2px 0px 8px rgba(193,39,45,0.9), -2px 0px 8px rgba(41,128,185,0.9)",
-      "-2px 0px 8px rgba(193,39,45,0.9), 2px 0px 8px rgba(41,128,185,0.9)",
-      "0px 0px 0px rgba(193,39,45,0)",
-    ],
-    transition: { duration: 0.4 },
-  },
-};
-
-const stagger = {
+const stagger: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -80,41 +85,161 @@ const stagger = {
   },
 };
 
-/* ---------- Background web layer: draws once on load, sits behind everything ---------- */
-function WebBackdrop() {
-  const strands = [
-    "M -50 120 C 200 40, 500 200, 900 60 S 1400 140, 1600 80",
-    "M -80 400 C 150 340, 420 480, 760 380 S 1250 420, 1650 460",
-    "M -60 700 C 220 640, 480 820, 820 700 S 1300 760, 1620 640",
-    "M 100 -50 C 180 200, 140 500, 220 900",
-    "M 700 -50 C 640 250, 720 550, 660 950",
-    "M 1300 -50 C 1360 260, 1280 560, 1350 980",
-    "M -50 950 C 300 900, 600 1000, 950 920 S 1400 980, 1650 900",
-  ];
+/* ---------- Theme persistence ---------- */
+const themeStorageKey = "portfolio-theme";
+const themeChangeEvent = "portfolio-theme-change";
+
+function subscribeToTheme(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(themeChangeEvent, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(themeChangeEvent, callback);
+  };
+}
+
+function getThemeSnapshot(): "dark" | "light" {
+  return window.localStorage.getItem(themeStorageKey) === "light"
+    ? "light"
+    : "dark";
+}
+
+function getServerThemeSnapshot(): "dark" | "light" {
+  return "dark";
+}
+
+/* ---------- Scroll spy ---------- */
+const sectionIds = ["me", "skills", "experience", "projects", "contact"];
+
+function useScrollSpy(ids: string[]) {
+  const [active, setActive] = useState(ids[0]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActive(entry.target.id);
+        });
+      },
+      { rootMargin: "-40% 0px -55% 0px", threshold: 0 },
+    );
+
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [ids]);
+
+  return active;
+}
+
+/* ---------- Tracks whether the page has scrolled past the top ---------- */
+function useScrolled(threshold = 16) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > threshold);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [threshold]);
+
+  return scrolled;
+}
+
+/* ---------- Scroll progress bar ---------- */
+function ScrollProgressBar() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
 
   return (
+    <motion.div
+      className="fixed top-0 left-0 right-0 h-[3px] origin-left z-[60]"
+      style={{
+        scaleX,
+        background:
+          "linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3))",
+      }}
+    />
+  );
+}
+
+/* ---------- Ambient background: grid + drifting gradient glows ---------- */
+function BackgroundAtmosphere({ theme }: { theme: "dark" | "light" }) {
+  const glowA =
+    theme === "dark" ? "rgba(129,140,248,0.26)" : "rgba(79,70,229,0.13)";
+  const glowB =
+    theme === "dark" ? "rgba(99,102,241,0.24)" : "rgba(67,56,202,0.12)";
+  const glowC =
+    theme === "dark" ? "rgba(67,56,202,0.22)" : "rgba(55,48,163,0.1)";
+
+  return (
+    <div className="fixed inset-0 -z-20 overflow-hidden pointer-events-none">
+      <div
+        className="absolute inset-0 opacity-50"
+        style={{
+          backgroundSize: "44px 44px",
+          backgroundImage:
+            "linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)",
+          maskImage:
+            "radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)",
+        }}
+      />
+      <motion.div
+        className="absolute -top-40 -left-40 w-[620px] h-[620px] rounded-full blur-[120px]"
+        style={{ background: glowA }}
+        animate={{ x: [0, 60, -20, 0], y: [0, 40, -30, 0] }}
+        transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute top-1/4 -right-48 w-[640px] h-[640px] rounded-full blur-[130px]"
+        style={{ background: glowB }}
+        animate={{ x: [0, -40, 30, 0], y: [0, -30, 20, 0] }}
+        transition={{ duration: 26, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-0 left-1/4 w-[560px] h-[560px] rounded-full blur-[110px]"
+        style={{ background: glowC }}
+        animate={{ x: [0, 30, -30, 0], y: [0, -20, 20, 0] }}
+        transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute top-2/3 left-1/2 w-[480px] h-[480px] rounded-full blur-[120px]"
+        style={{ background: glowA }}
+        animate={{ x: [0, -30, 20, 0], y: [0, 20, -25, 0] }}
+        transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+}
+
+/* ---------- Subtle film-grain texture for depth ---------- */
+function NoiseOverlay() {
+  return (
     <svg
-      className="pointer-events-none fixed inset-0 w-full h-full -z-10 opacity-[0.16]"
-      viewBox="0 0 1600 1000"
-      preserveAspectRatio="xMidYMid slice"
-      fill="none"
+      className="pointer-events-none fixed inset-0 -z-10 h-full w-full opacity-[0.04] mix-blend-overlay"
+      aria-hidden
     >
-      {strands.map((d, i) => (
-        <motion.path
-          key={i}
-          d={d}
-          stroke="#c1272d"
-          strokeWidth={1.2}
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 2.2, delay: i * 0.15, ease: "easeInOut" }}
+      <filter id="noise">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.8"
+          numOctaves="2"
+          stitchTiles="stitch"
         />
-      ))}
+      </filter>
+      <rect width="100%" height="100%" filter="url(#noise)" />
     </svg>
   );
 }
 
-/* ---------- Cursor web-trail ---------- */
+/* ---------- Soft cursor glow that follows the pointer ---------- */
 function CursorGlow() {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -138,515 +263,901 @@ function CursorGlow() {
         y: sy,
         translateX: "-50%",
         translateY: "-50%",
-        width: 260,
-        height: 260,
+        width: 340,
+        height: 340,
         background:
-          "radial-gradient(circle, rgba(193,39,45,0.10) 0%, rgba(193,39,45,0) 70%)",
+          "radial-gradient(circle, var(--accent-soft) 0%, var(--accent-2-soft) 45%, transparent 72%)",
         borderRadius: "50%",
       }}
     />
   );
 }
 
-/* ---------- Angular "pinned poster" card shape ---------- */
-const clipCard = "polygon(0 0, 100% 0, 100% 92%, 92% 100%, 0 100%)";
+/* ---------- Magnetic hover wrapper for primary CTAs ---------- */
+type MagneticProps = React.ComponentPropsWithoutRef<typeof motion.a> & {
+  strength?: number;
+};
 
-/* ---------- Spiderman Animations ---------- */
-function SpidermanSwing() {
+function Magnetic({
+  children,
+  className,
+  strength = 16,
+  ...rest
+}: MagneticProps) {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const sx = useSpring(x, { stiffness: 200, damping: 15, mass: 0.2 });
+  const sy = useSpring(y, { stiffness: 200, damping: 15, mass: 0.2 });
+
+  const handleMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    x.set((e.clientX - rect.left - rect.width / 2) / strength);
+    y.set((e.clientY - rect.top - rect.height / 2) / strength);
+  };
+
+  const handleLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.a
+      ref={ref}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      style={{ x: sx, y: sy }}
+      className={className}
+      {...rest}
+    >
+      {children}
+    </motion.a>
+  );
+}
+
+/* ---------- Card with a mouse-tracked spotlight glow ---------- */
+type AccentTint = "accent" | "accent-2" | "accent-3";
+
+type SpotlightCardProps = React.ComponentProps<typeof motion.div> & {
+  children?: React.ReactNode;
+  tint?: AccentTint;
+};
+
+function SpotlightCard({
+  className = "",
+  children,
+  tint = "accent",
+  style,
+  ...rest
+}: SpotlightCardProps) {
+  const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--mx", `${e.clientX - rect.left}px`);
+    e.currentTarget.style.setProperty("--my", `${e.clientY - rect.top}px`);
+  };
+
   return (
     <motion.div
-      className="fixed -top-10 right-[8%] md:right-[15%] z-0 pointer-events-none origin-top opacity-70 flex flex-col items-center"
-      initial={{ rotate: -25 }}
-      animate={{ rotate: 25 }}
-      transition={{
-        duration: 3,
-        repeat: Infinity,
-        repeatType: "reverse",
-        ease: "easeInOut",
-      }}
+      onMouseMove={handleMove}
+      className={`spotlight-card ${className}`}
+      style={{ ...style, ["--accent-soft" as never]: `var(--${tint}-soft)` }}
+      {...rest}
     >
-      <div className="w-[1.5px] h-[200px] md:h-[350px] bg-white/20" />
-      <div className="transform -translate-y-4">
-        <GiSpiderMask size={70} className="text-[#c1272d]" />
-      </div>
+      <div className="relative z-10 h-full">{children}</div>
     </motion.div>
   );
 }
 
-function HangingSpider() {
-  return (
-    <motion.div
-      className="fixed -top-5 left-[5%] md:left-[10%] z-0 pointer-events-none opacity-80 flex flex-col items-center"
-      initial={{ y: -400 }}
-      animate={{ y: [-400, 0, -50, -30, -400] }}
-      transition={{
-        duration: 7,
-        repeat: Infinity,
-        repeatDelay: 12,
-        ease: "easeInOut",
-      }}
-    >
-      <div className="w-[1px] h-[300px] bg-white/30" />
-      <div className="transform -translate-y-1">
-        <GiHangingSpider size={40} className="text-[#c1272d]" />
-      </div>
-    </motion.div>
-  );
-}
+/* ---------- Thin gradient ring wrapper for premium card borders ---------- */
+const tintGradient: Record<AccentTint, string> = {
+  accent: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)",
+  "accent-2":
+    "linear-gradient(135deg, var(--accent-2) 0%, var(--accent-3) 100%)",
+  "accent-3": "linear-gradient(135deg, var(--accent-3) 0%, var(--accent) 100%)",
+};
 
-function ScrollWebs() {
-  const { scrollY } = useScroll();
-  const scrollVelocity = useVelocity(scrollY);
-
-  const topWebY = useTransform(scrollVelocity, [100, 3000], [-350, 0]);
-  const smoothTopWebY = useSpring(topWebY, { damping: 20, stiffness: 150 });
-
-  const bottomWebY = useTransform(scrollVelocity, [-100, -3000], [350, 0]);
-  const smoothBottomWebY = useSpring(bottomWebY, {
-    damping: 20,
-    stiffness: 150,
-  });
-
-  return (
-    <>
-      <motion.div
-        className="fixed top-0 left-0 w-full flex justify-around pointer-events-none z-40 opacity-70"
-        style={{ y: smoothTopWebY }}
-      >
-        <WebShooter direction="top" delay={0} />
-        <WebShooter direction="top" delay={1} />
-        <WebShooter direction="top" delay={2} />
-      </motion.div>
-
-      <motion.div
-        className="fixed bottom-0 left-0 w-full flex justify-around pointer-events-none z-40 opacity-70"
-        style={{ y: smoothBottomWebY }}
-      >
-        <WebShooter direction="bottom" delay={0} />
-        <WebShooter direction="bottom" delay={1} />
-        <WebShooter direction="bottom" delay={2} />
-      </motion.div>
-    </>
-  );
-}
-
-function WebShooter({
-  direction,
-  delay,
+function GradientBorder({
+  children,
+  tint = "accent",
+  className = "",
 }: {
-  direction: "top" | "bottom";
-  delay: number;
+  children: React.ReactNode;
+  tint?: AccentTint;
+  className?: string;
 }) {
-  const heights = ["h-40", "h-56", "h-48"];
-  const hClass = heights[delay];
-
-  if (direction === "top") {
-    return (
-      <div className="flex flex-col items-center">
-        <div
-          className={`w-[2px] ${hClass} bg-gradient-to-b from-transparent to-white/60`}
-        />
-        <GiSpiderWeb
-          size={70}
-          className="text-white/60 transform -translate-y-1/2"
-        />
-      </div>
-    );
-  } else {
-    return (
-      <div className="flex flex-col items-center">
-        <GiSpiderWeb
-          size={70}
-          className="text-white/60 transform translate-y-1/2"
-        />
-        <div
-          className={`w-[2px] ${hClass} bg-gradient-to-b from-white/60 to-transparent`}
-        />
-      </div>
-    );
-  }
-}
-
-function CornerWebs() {
   return (
-    <>
-      <div className="fixed top-0 left-0 pointer-events-none opacity-30 -z-10">
-        <GiSpiderWeb
-          size={350}
-          className="text-white/20 transform -translate-x-1/4 -translate-y-1/4"
-        />
-      </div>
-      <div className="fixed bottom-0 right-0 pointer-events-none opacity-30 -z-10">
-        <GiSpiderWeb
-          size={350}
-          className="text-white/20 transform translate-x-1/4 translate-y-1/4"
-        />
-      </div>
-    </>
+    <div
+      className={`rounded-2xl p-[1.5px] opacity-80 hover:opacity-100 transition-opacity duration-300 ${className}`}
+      style={{ backgroundImage: tintGradient[tint] }}
+    >
+      {children}
+    </div>
   );
 }
 
+/* ---------- Infinite scrolling row of tech marks ---------- */
+function TechMarquee({
+  items,
+}: {
+  items: { name: string; icon: IconType; color: string }[];
+}) {
+  const loop = [...items, ...items];
+  return (
+    <div
+      className="relative mt-14 overflow-hidden"
+      style={{
+        maskImage:
+          "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
+      }}
+    >
+      <div className="flex w-max gap-10 animate-marquee">
+        {loop.map((t, i) => (
+          <div
+            key={`${t.name}-${i}`}
+            className="flex items-center gap-2 whitespace-nowrap text-sm text-[var(--text-muted)]"
+          >
+            <t.icon style={{ color: t.color }} size={18} />
+            {t.name}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Tech pill whose icon/background colors swap on hover ---------- */
+function TechChip({
+  name,
+  icon: Icon,
+  color,
+  fill,
+  className = "",
+}: {
+  name: string;
+  icon: IconType;
+  color: string;
+  fill?: string;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`swap-chip inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] ${className}`}
+      style={{ ["--chip-fill" as never]: fill ?? color }}
+    >
+      <Icon className="swap-icon" style={{ color }} size={14} />
+      <span className="swap-label">{name}</span>
+    </span>
+  );
+}
+
+/* ---------- Data ---------- */
+const heroTech: { name: string; icon: IconType; color: string }[] = [
+  { name: "TypeScript", icon: SiTypescript, color: "#3178C6" },
+  { name: "Next.js", icon: SiNextdotjs, color: "var(--text)" },
+  { name: "React", icon: SiReact, color: "#61DAFB" },
+  { name: "Node.js", icon: SiNodedotjs, color: "#339933" },
+  { name: "Express.js", icon: SiExpress, color: "var(--text)" },
+  { name: "Prisma", icon: SiPrisma, color: "var(--text)" },
+  { name: "PostgreSQL", icon: SiPostgresql, color: "#4169E1" },
+  { name: "Tailwind CSS", icon: SiTailwindcss, color: "#06B6D4" },
+];
+
+const stats: { label: string; value: string; tint: AccentTint }[] = [
+  { label: "Projects shipped", value: "4+", tint: "accent" },
+  { label: "Production client site", value: "1", tint: "accent-2" },
+  { label: "Core technologies", value: "16+", tint: "accent-3" },
+  { label: "Open to", value: "Remote", tint: "accent" },
+];
+
+const skillCategories: {
+  title: string;
+  description: string;
+  tint: AccentTint;
+  items: { name: string; icon: IconType; color: string; fill?: string }[];
+}[] = [
+  {
+    title: "Frontend",
+    description: "Interfaces that feel fast and stay maintainable.",
+    tint: "accent-2",
+    items: [
+      { name: "React", icon: SiReact, color: "#61DAFB", fill: "#0e7490" },
+      { name: "Next.js", icon: SiNextdotjs, color: "var(--text)" },
+      { name: "TypeScript", icon: SiTypescript, color: "#3178C6" },
+      { name: "Tailwind CSS", icon: SiTailwindcss, color: "#06B6D4" },
+      { name: "React Query", icon: SiReactquery, color: "#FF4154" },
+      { name: "React Hook Form", icon: SiReacthookform, color: "#EC5990" },
+      { name: "Zustand", icon: FiBox, color: "var(--accent)" },
+    ],
+  },
+  {
+    title: "Backend",
+    description: "APIs and services built to hold up under real traffic.",
+    tint: "accent",
+    items: [
+      { name: "Node.js", icon: SiNodedotjs, color: "#339933" },
+      { name: "Express.js", icon: SiExpress, color: "var(--text)" },
+      { name: "Prisma ORM", icon: SiPrisma, color: "var(--text)" },
+      { name: "Zod Validation", icon: SiZod, color: "var(--text)" },
+      { name: "REST APIs", icon: FiServer, color: "var(--accent)" },
+      { name: "ts-rest", icon: FiCode, color: "var(--accent)" },
+    ],
+  },
+  {
+    title: "Databases & Tools",
+    description: "Storage, versioning, and the tools that keep teams in sync.",
+    tint: "accent-3",
+    items: [
+      { name: "PostgreSQL", icon: SiPostgresql, color: "#4169E1" },
+      { name: "MongoDB", icon: SiMongodb, color: "#47A248" },
+      { name: "MySQL", icon: SiMysql, color: "#4479A1" },
+      { name: "Git & GitHub", icon: SiGithub, color: "var(--text)" },
+    ],
+  },
+];
+
+const experience: {
+  role: string;
+  org: string;
+  type: string;
+  icon: IconType;
+  project: string;
+  projectLinkText: string;
+  projectHref?: string;
+  period: string;
+  tint: AccentTint;
+  current?: boolean;
+  points: string[];
+}[] = [
+  {
+    role: "Fullstack Developer",
+    org: "SkillPrompt",
+    type: "Full-time",
+    icon: FiBriefcase,
+    project: "Project",
+    tint: "accent",
+    current: true,
+    projectLinkText: "yourOSHC",
+    period: "Jun 2026 – Present",
+    points: [
+      "Built and maintained REST APIs using Express.js and Prisma ORM",
+      "Developed new frontend pages and features with Next.js and TypeScript",
+      "Identified and fixed bugs across a live production application",
+      "Collaborated with a cross-functional development team",
+    ],
+  },
+  {
+    role: "Freelance Fullstack Developer",
+    org: "Manjushree Clinic",
+    type: "Freelance",
+    icon: FiZap,
+    project: "Live site",
+    tint: "accent-2",
+    projectLinkText: "manjushreeayurvediccenter.com",
+    projectHref: "https://manjushreeayurvediccenter.com/",
+    period: "Jun 2026",
+    points: [
+      "Independently designed, built, and deployed a full production website with a public site and private admin panel",
+      "Built the admin panel with complete CRUD for doctors and appointments",
+      "Used TypeScript, Next.js, Express.js, Prisma ORM, and PostgreSQL end-to-end; handled deployment and delivery solo",
+    ],
+  },
+  {
+    role: "Fullstack Developer Intern",
+    org: "SkillPrompt",
+    type: "Internship",
+    icon: FiBookOpen,
+    project: "Project",
+    tint: "accent-3",
+    projectLinkText: "yourOSHC",
+    period: "Jan 2026 – May 2026",
+    points: [
+      "Onboarded onto the yourOSHC codebase and contributed under senior engineer guidance",
+      "Built UI components with Next.js and TypeScript as part of the frontend team",
+      "Learned REST API development patterns using Express.js and Prisma ORM",
+      "Participated in code reviews and sprint planning",
+    ],
+  },
+];
+
+const techIconMap: Record<
+  string,
+  { icon: IconType; color: string; fill?: string }
+> = {
+  "Next.js": { icon: SiNextdotjs, color: "var(--text)" },
+  "Express.js": { icon: SiExpress, color: "var(--text)" },
+  Prisma: { icon: SiPrisma, color: "var(--text)" },
+  PostgreSQL: { icon: SiPostgresql, color: "#4169E1" },
+  TypeScript: { icon: SiTypescript, color: "#3178C6" },
+};
+
+const projects = [
+  {
+    title: "Manjushree Clinic",
+    desc: "Full production website + admin dashboard for a healthcare clinic client — public site, appointment booking, admin CRUD for doctors and appointments.",
+    stack: ["Next.js", "Express.js", "Prisma", "PostgreSQL"],
+    live: "https://manjushreeayurvediccenter.com/",
+    github: null as string | null,
+  },
+  {
+    title: "Campus Mate",
+    desc: "Student management system web app for handling student records and administrative workflows.",
+    stack: ["TypeScript"],
+    live: null as string | null,
+    github: "https://github.com/TejendraDharikar/campusMate",
+  },
+  {
+    title: "Chautari",
+    desc: "Mini social media platform with a feed and user interaction features.",
+    stack: ["TypeScript"],
+    live: null as string | null,
+    github: "https://github.com/TejendraDharikar/chautari",
+  },
+  {
+    title: "UniHub",
+    desc: "Platform for university students to collaborate and share resources.",
+    stack: ["TypeScript"],
+    live: null as string | null,
+    github: null as string | null,
+  },
+];
+
+const nav = ["Me", "Skills", "Experience", "Projects", "Contact"];
+
+/* ---------- Page ---------- */
 export default function Home() {
   const [isOpen, setIsOpen] = useState(false);
-  const nav = ["Me", "Skills", "Experience", "Projects", "Contact"];
+  const theme = useSyncExternalStore(
+    subscribeToTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot,
+  );
+  const active = useScrollSpy(sectionIds);
+  const scrolled = useScrolled();
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    window.localStorage.setItem(themeStorageKey, nextTheme);
+    window.dispatchEvent(new Event(themeChangeEvent));
+  };
+
+  const cardBase =
+    "bg-[var(--surface)] backdrop-blur-xl rounded-2xl transition-all duration-300 hover:shadow-[0_0_50px_-14px_var(--accent-soft-strong)]";
 
   return (
     <div
-      className={`${display.variable} ${body.variable} font-body bg-[#0b0b10] text-[#eae7e2] min-h-screen relative`}
+      data-theme={theme}
+      className={`${display.variable} ${body.variable} font-body bg-[var(--bg)] text-[var(--text)] min-h-screen relative overflow-x-hidden`}
       style={{ fontFamily: "var(--font-body)" }}
     >
-      <WebBackdrop />
-      <CornerWebs />
-      <ScrollWebs />
-      <SpidermanSwing />
-      <HangingSpider />
+      <ScrollProgressBar />
+      <BackgroundAtmosphere theme={theme} />
+      <NoiseOverlay />
       <CursorGlow />
 
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/10 bg-[#0b0b10]/85 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <a
-            className="text-3xl tracking-wide text-[#eae7e2]"
-            style={{ fontFamily: "var(--font-display)" }}
-            href="#me"
+      <header
+        className="fixed top-0 inset-x-0 z-50 flex justify-center px-4 transition-[padding] duration-300 ease-out"
+        style={{ paddingTop: scrolled ? "0.625rem" : "1.25rem" }}
+      >
+        <div className="relative w-full max-w-5xl">
+          <div
+            className="rounded-full p-[1px] shadow-[0_10px_40px_-15px_rgba(0,0,0,0.45)]"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, color-mix(in srgb, var(--accent) 45%, transparent), color-mix(in srgb, var(--accent-2) 55%, transparent), color-mix(in srgb, var(--accent-3) 45%, transparent))",
+            }}
           >
-            TEJENDRA <span className="text-[#c1272d]">DHARIKAR</span>
-          </a>
-
-          <ul className="hidden md:flex space-x-9 text-base">
-            {nav.map((item) => (
-              <li key={item}>
-                <a
-                  href={`#${item.toLowerCase()}`}
-                  className="relative text-[#c8c6c1] hover:text-[#eae7e2] transition-colors group"
-                >
-                  {item}
-                  <span className="absolute left-0 -bottom-1 w-0 h-px bg-[#c1272d] transition-all duration-300 group-hover:w-full" />
-                </a>
-              </li>
-            ))}
-          </ul>
-
-          <button
-            className="md:hidden text-2xl text-[#eae7e2]"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <FiX /> : <FiMenu />}
-          </button>
-        </div>
-
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            className="md:hidden bg-[#0b0b10] border-t border-white/10 flex flex-col px-6 py-4 space-y-4"
-          >
-            {nav.map((item) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="text-[#c8c6c1]"
-                onClick={() => setIsOpen(false)}
+            <nav className="rounded-full bg-[var(--nav-bg)] backdrop-blur-xl">
+              <div
+                className={`flex items-center justify-between gap-4 px-3 md:px-4 transition-all duration-300 ${
+                  scrolled ? "py-2" : "py-2.5"
+                }`}
               >
-                {item}
-              </a>
-            ))}
-          </motion.div>
-        )}
-      </nav>
+                <a href="#me" className="flex items-center gap-2.5 shrink-0">
+                  <span
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-sm text-white shrink-0"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(135deg, var(--accent), var(--accent-3))",
+                      fontFamily: "var(--font-display)",
+                    }}
+                  >
+                    TD
+                  </span>
+                  <span
+                    className="hidden sm:inline text-lg tracking-wide text-[var(--text)]"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    TEJENDRA{" "}
+                    <span
+                      className="bg-clip-text text-transparent animate-gradient-shift"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent-2), var(--accent))",
+                      }}
+                    >
+                      DHARIKAR
+                    </span>
+                  </span>
+                </a>
+
+                <ul className="hidden md:flex items-center gap-1 text-sm">
+                  {nav.map((item) => {
+                    const id = item.toLowerCase();
+                    const isActive = active === id;
+                    return (
+                      <li key={item} className="relative">
+                        <a
+                          href={`#${id}`}
+                          className={`relative z-10 block px-4 py-2 rounded-full transition-colors ${
+                            isActive
+                              ? "text-white"
+                              : "text-[var(--text-secondary)] hover:text-[var(--text)]"
+                          }`}
+                        >
+                          {item}
+                        </a>
+                        {isActive && (
+                          <motion.span
+                            layoutId="nav-pill"
+                            className="absolute inset-0 rounded-full"
+                            style={{
+                              backgroundImage:
+                                "linear-gradient(135deg, var(--accent), var(--accent-2))",
+                            }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 380,
+                              damping: 30,
+                            }}
+                          />
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="p-2 text-xl rounded-full text-[var(--text)] hover:bg-[var(--surface-2)] hover:text-[var(--accent)] transition-colors"
+                    onClick={toggleTheme}
+                    aria-label={`Switch to ${theme === "dark" ? "day" : "night"} mode`}
+                    aria-pressed={theme === "light"}
+                    title={`Switch to ${theme === "dark" ? "day" : "night"} mode`}
+                  >
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={theme}
+                        initial={{ rotate: -90, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        exit={{ rotate: 90, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="inline-block"
+                      >
+                        {theme === "dark" ? <FiSun /> : <FiMoon />}
+                      </motion.span>
+                    </AnimatePresence>
+                  </button>
+
+                  <button
+                    className="md:hidden p-2 text-xl rounded-full text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
+                    onClick={() => setIsOpen(!isOpen)}
+                    aria-label="Toggle navigation menu"
+                    aria-expanded={isOpen}
+                  >
+                    <motion.span
+                      animate={{ rotate: isOpen ? 90 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="inline-block"
+                    >
+                      {isOpen ? <FiX /> : <FiMenu />}
+                    </motion.span>
+                  </button>
+                </div>
+              </div>
+            </nav>
+          </div>
+
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="md:hidden absolute inset-x-0 top-[calc(100%+0.75rem)] rounded-3xl border border-[var(--border)] bg-[var(--nav-bg)] backdrop-blur-xl shadow-[0_15px_45px_-15px_rgba(0,0,0,0.5)] overflow-hidden"
+              >
+                <div className="flex flex-col p-2">
+                  {nav.map((item) => (
+                    <a
+                      key={item}
+                      href={`#${item.toLowerCase()}`}
+                      className="px-4 py-3 rounded-2xl text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item}
+                    </a>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </header>
 
       {/* Intro */}
-      <section id="me" className="min-h-screen flex items-center px-6 pt-24">
+      <section
+        id="me"
+        className="relative min-h-screen flex items-center px-6 pt-28 pb-16"
+      >
         <div className="max-w-5xl mx-auto w-full">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-[#c1272d] text-sm tracking-widest mb-4"
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full border border-[var(--border-strong)] text-xs tracking-widest uppercase text-[var(--text-secondary)]"
           >
-            Fullstack developer — Nepal, open to remote
-          </motion.p>
-          <motion.h2
-            variants={spiderSense}
-            initial="hidden"
-            animate="visible"
-            whileHover="hover"
-            className="text-7xl md:text-9xl leading-[0.9] mb-8 text-left cursor-crosshair"
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--accent)]" />
+            </span>
+            Fullstack developer — Nepal
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: 0.25,
+              duration: 0.7,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="text-6xl md:text-8xl leading-[0.95] mb-8 text-left"
             style={{ fontFamily: "var(--font-display)" }}
           >
             BUILDING THINGS
             <br />
-            THAT <span className="text-[#c1272d]">HOLD TOGETHER</span>
-          </motion.h2>
+            THAT{" "}
+            <span
+              className="bg-clip-text text-transparent animate-gradient-shift"
+              style={{
+                backgroundImage:
+                  "linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3))",
+              }}
+            >
+              HOLD TOGETHER
+            </span>
+          </motion.h1>
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-            className="text-lg md:text-xl max-w-xl text-[#c8c6c1] leading-relaxed mb-10"
+            transition={{ delay: 0.45, duration: 0.6 }}
+            className="text-lg md:text-xl max-w-xl text-[var(--text-secondary)] leading-relaxed mb-10"
           >
-            I work across TypeScript, Next.js, Express.js, Prisma, and
+            I work across TypeScript, Next.js, Express.js, PrismaORM, MySQL and
             PostgreSQL — building APIs and interfaces that stay solid under real
-            traffic. I've shipped a full production site for a paying client,
-            and I currently build features at SkillPrompt.
+            traffic. I&apos;ve shipped a full production site for a paying
+            client, and I currently build features at SkillPrompt.
           </motion.p>
-          <motion.a
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="flex flex-wrap items-center gap-4"
+          >
+            <Magnetic
+              href="#contact"
+              className="group relative inline-flex items-center gap-2 px-8 py-3 rounded-full text-white font-medium shadow-lg overflow-hidden"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, var(--accent), var(--accent-2) 55%, var(--accent-3))",
+                boxShadow: "0 8px 30px -10px var(--accent-soft-strong)",
+              }}
+            >
+              <span className="shimmer-sweep pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+              <span className="relative z-10 inline-flex items-center gap-2">
+                Get in touch <FiArrowUpRight />
+              </span>
+            </Magnetic>
+            <Magnetic
+              href="#projects"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] backdrop-blur-md text-[var(--text)] hover:border-[var(--accent-2)] transition-colors"
+            >
+              View projects
+            </Magnetic>
+          </motion.div>
+
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            whileHover={{
-              scale: 1.05,
-              boxShadow: "0px 0px 15px rgba(193,39,45,0.6)",
-            }}
-            whileTap={{ scale: 0.95 }}
-            href="#contact"
-            className="inline-block px-8 py-3 border border-[#c1272d] text-[#eae7e2] hover:bg-[#c1272d] transition-colors"
+            transition={{ delay: 0.9, duration: 0.8 }}
           >
-            Get in touch
-          </motion.a>
+            <TechMarquee items={heroTech} />
+          </motion.div>
         </div>
+
+        <motion.a
+          href="#skills"
+          aria-label="Scroll to skills"
+          className="hidden md:flex absolute bottom-10 left-1/2 -translate-x-1/2 flex-col items-center gap-2 text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <span className="text-xs tracking-widest uppercase">Scroll</span>
+          <FiChevronDown size={18} />
+        </motion.a>
+      </section>
+
+      {/* Stats strip */}
+      <section className="border-t border-[var(--border)] px-6 py-10">
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8"
+        >
+          {stats.map((s) => (
+            <motion.div key={s.label} variants={fadeInUp} className="text-left">
+              <p
+                className="text-3xl md:text-4xl mb-1"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  color: `var(--${s.tint})`,
+                }}
+              >
+                {s.value}
+              </p>
+              <p className="text-xs md:text-sm text-[var(--text-muted)] tracking-wide">
+                {s.label}
+              </p>
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
 
       {/* Skills */}
       <section
         id="skills"
-        className="py-32 border-t border-white/10 px-6 relative overflow-hidden"
+        className="py-28 border-t border-[var(--border)] px-6"
       >
-        <motion.div
-          initial={{ x: "-10vw", y: 20 }}
-          whileInView={{ x: "110vw", y: [20, -10, 30, -5, 20] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute top-20 left-0 text-[#c1272d] opacity-20 pointer-events-none z-0"
-        >
-          <GiSpiderBot size={40} />
-        </motion.div>
-
-        <div className="max-w-6xl mx-auto relative z-10">
+        <div className="max-w-6xl mx-auto">
+          <motion.p
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="text-sm tracking-widest uppercase text-[var(--accent-2)] mb-3"
+          >
+            What I work with
+          </motion.p>
           <motion.h2
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-5xl mb-14 text-[#c1272d]"
+            className="text-4xl md:text-5xl mb-14"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Skills
           </motion.h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Frontend",
-                items: [
-                  "React.js",
-                  "Next.js",
-                  "TypeScript",
-                  "TailwindCSS",
-                  "React Query",
-                  "Zustand",
-                  "React Hook Form",
-                ],
-              },
-              {
-                title: "Backend",
-                items: [
-                  "Node.js & Express.js",
-                  "Prisma ORM",
-                  "Zod Validation",
-                  "REST APIs",
-                  "ts-rest",
-                ],
-              },
-              {
-                title: "Databases & Tools",
-                items: ["PostgreSQL", "MongoDB", "MySQL", "Git & GitHub"],
-              },
-            ].map((skill) => (
-              <motion.div
-                key={skill.title}
-                variants={swingIn}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                whileHover={{ scale: 1.02, y: -4 }}
-                className="relative group bg-[#17171f] border border-white/10 p-8 transition-shadow hover:shadow-[0_0_30px_-8px_rgba(193,39,45,0.5)] overflow-hidden"
-                style={{ clipPath: clipCard }}
-              >
-                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-15 transform translate-x-1/2 -translate-y-1/2 scale-50 group-hover:scale-100 transition-all duration-500 pointer-events-none">
-                  <GiSpiderWeb size={180} className="text-[#c1272d]" />
-                </div>
 
-                <h3
-                  className="text-2xl mb-6 text-[#eae7e2] border-b border-white/10 pb-3"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  {skill.title}
-                </h3>
-                <ul className="space-y-3 text-[#c8c6c1]">
-                  {skill.items.map((item) => (
-                    <li
-                      key={item}
-                      className="text-sm flex items-center group/item"
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-3 gap-6"
+          >
+            {skillCategories.map((skill) => (
+              <motion.div key={skill.title} variants={riseIn}>
+                <GradientBorder tint={skill.tint} className="h-full">
+                  <SpotlightCard
+                    tint={skill.tint}
+                    whileHover={{ y: -4 }}
+                    className={`${cardBase} p-8 h-full`}
+                  >
+                    <span
+                      className="inline-block w-8 h-1 rounded-full mb-4"
+                      style={{ backgroundImage: tintGradient[skill.tint] }}
+                    />
+                    <h3
+                      className="text-2xl mb-2 text-[var(--text)]"
+                      style={{ fontFamily: "var(--font-display)" }}
                     >
-                      <GiSpiderWeb
-                        className="text-[#c1272d]/40 group-hover/item:text-[#c1272d] mr-3 transition-colors"
-                        size={14}
-                      />
-                      <span className="group-hover/item:text-[#eae7e2] transition-colors">
-                        {item}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                      {skill.title}
+                    </h3>
+                    <p className="text-sm text-[var(--text-muted)] mb-6 leading-relaxed">
+                      {skill.description}
+                    </p>
+                    <div className="flex flex-wrap gap-2.5">
+                      {skill.items.map((item) => (
+                        <TechChip
+                          key={item.name}
+                          name={item.name}
+                          icon={item.icon}
+                          color={item.color}
+                          fill={item.fill}
+                          className="px-3 py-1.5 text-xs text-[var(--text-secondary)]"
+                        />
+                      ))}
+                    </div>
+                  </SpotlightCard>
+                </GradientBorder>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Experience */}
-      <section id="experience" className="py-32 border-t border-white/10 px-6">
+      <section
+        id="experience"
+        className="py-28 border-t border-[var(--border)] px-6"
+      >
         <div className="max-w-5xl mx-auto">
+          <motion.p
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="text-sm tracking-widest uppercase text-[var(--accent)] mb-3"
+          >
+            Where I&apos;ve worked
+          </motion.p>
           <motion.h2
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-5xl mb-14 text-[#c1272d]"
+            className="text-4xl md:text-5xl mb-14"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Experience
           </motion.h2>
 
-          <div className="relative border-l-2 border-white/10 pl-8 md:pl-12 space-y-12 ml-4 md:ml-0">
-            {/* First Experience Item */}
-            <div className="relative">
-              {/* Timeline Web Dot */}
-              <div className="absolute top-6 -left-[2.8rem] md:-left-[3.8rem] w-10 h-10 bg-[#0b0b10] rounded-full flex items-center justify-center text-[#c1272d] border border-white/20 z-10 shadow-[0_0_15px_rgba(193,39,45,0.3)]">
-                <GiSpiderWeb size={20} />
+          <div className="relative pl-8 md:pl-12 space-y-10 ml-4 md:ml-0">
+            <motion.div
+              className="absolute left-0 top-0 bottom-0 w-[2px] origin-top rounded-full"
+              style={{
+                backgroundImage:
+                  "linear-gradient(to bottom, var(--accent), var(--accent-2), var(--accent-3))",
+              }}
+              initial={{ scaleY: 0 }}
+              whileInView={{ scaleY: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+            />
+
+            {experience.map((job) => (
+              <div key={job.role + job.org} className="relative">
+                <div className="absolute top-6 -left-[2.95rem] md:-left-[3.95rem] z-10">
+                  {job.current && (
+                    <span
+                      className="absolute inset-0 rounded-full animate-ping opacity-50"
+                      style={{ backgroundImage: tintGradient[job.tint] }}
+                    />
+                  )}
+                  <div
+                    className="relative w-10 h-10 rounded-full flex items-center justify-center text-white"
+                    style={{
+                      backgroundImage: tintGradient[job.tint],
+                      boxShadow: `0 0 24px -6px var(--${job.tint}-soft-strong, var(--accent-soft-strong))`,
+                    }}
+                  >
+                    <job.icon size={17} />
+                  </div>
+                </div>
+
+                <motion.div
+                  variants={riseIn}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  whileHover={{ x: 4 }}
+                >
+                  <GradientBorder tint={job.tint}>
+                    <SpotlightCard
+                      tint={job.tint}
+                      className={`${cardBase} p-8 md:p-10`}
+                    >
+                      <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
+                        <div>
+                          <h3
+                            className="text-2xl text-[var(--text)] mb-2"
+                            style={{ fontFamily: "var(--font-display)" }}
+                          >
+                            {job.role} — {job.org}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className="text-[11px] font-medium px-2.5 py-1 rounded-full tracking-wide"
+                              style={{
+                                backgroundColor: `var(--${job.tint}-soft)`,
+                                color: `var(--${job.tint})`,
+                              }}
+                            >
+                              {job.type}
+                            </span>
+                            {job.current && (
+                              <span
+                                className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full text-white"
+                                style={{
+                                  backgroundImage: tintGradient[job.tint],
+                                }}
+                              >
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                                </span>
+                                Current
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-[var(--text-muted)] text-sm tracking-wider shrink-0">
+                          {job.period}
+                        </span>
+                      </div>
+                      <p
+                        className="text-sm italic mb-5 tracking-wide"
+                        style={{ color: `var(--${job.tint})` }}
+                      >
+                        {job.projectHref ? (
+                          <>
+                            {job.project}:{" "}
+                            <a
+                              href={job.projectHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline hover:text-[var(--text)]"
+                            >
+                              {job.projectLinkText}
+                            </a>
+                          </>
+                        ) : (
+                          `${job.project}: ${job.projectLinkText}`
+                        )}
+                      </p>
+                      <ul className="text-[var(--text-secondary)] space-y-3 list-disc list-inside text-sm leading-relaxed">
+                        {job.points.map((point) => (
+                          <li key={point}>{point}</li>
+                        ))}
+                      </ul>
+                    </SpotlightCard>
+                  </GradientBorder>
+                </motion.div>
               </div>
-
-              {/* Connecting Web Line */}
-              <div className="absolute top-10 -left-[2.8rem] md:-left-[3.8rem] w-[2.8rem] md:w-[3.8rem] h-[1.5px] bg-white/10 z-0" />
-
-              <motion.div
-                variants={swingIn}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                whileHover={{ scale: 1.02, x: 5 }}
-                className="relative group bg-[#17171f] border border-white/10 p-8 md:p-10 transition-all hover:border-[#c1272d]/50 overflow-hidden"
-                style={{ clipPath: clipCard }}
-              >
-                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-15 transform translate-x-1/2 -translate-y-1/2 scale-50 group-hover:scale-100 transition-all duration-500 pointer-events-none">
-                  <GiSpiderWeb size={250} className="text-[#c1272d]" />
-                </div>
-
-                <div className="flex flex-wrap justify-between items-baseline mb-2">
-                  <h3
-                    className="text-2xl text-[#eae7e2]"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    Fullstack Developer Intern — SkillPrompt
-                  </h3>
-                  <span className="text-[#8b8b93] text-sm tracking-wider">
-                    Jun 2026 – Present
-                  </span>
-                </div>
-                <p className="text-[#c1272d] text-sm italic mb-5 tracking-wide">
-                  Project: yourOSHC
-                </p>
-                <ul className="text-[#c8c6c1] space-y-3 list-disc list-inside text-sm leading-relaxed">
-                  <li>
-                    Built and maintained REST APIs using Express.js and Prisma
-                    ORM
-                  </li>
-                  <li>
-                    Developed new frontend pages and features with Next.js and
-                    TypeScript
-                  </li>
-                  <li>
-                    Identified and fixed bugs across a live production
-                    application
-                  </li>
-                  <li>Collaborated with a cross-functional development team</li>
-                </ul>
-              </motion.div>
-            </div>
-
-            {/* Second Experience Item */}
-            <div className="relative">
-              {/* Timeline Web Dot */}
-              <div className="absolute top-6 -left-[2.8rem] md:-left-[3.8rem] w-10 h-10 bg-[#0b0b10] rounded-full flex items-center justify-center text-[#c1272d] border border-white/20 z-10 shadow-[0_0_15px_rgba(193,39,45,0.3)]">
-                <GiSpiderWeb size={20} />
-              </div>
-
-              {/* Connecting Web Line */}
-              <div className="absolute top-10 -left-[2.8rem] md:-left-[3.8rem] w-[2.8rem] md:w-[3.8rem] h-[1.5px] bg-white/10 z-0" />
-
-              <motion.div
-                variants={swingIn}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                whileHover={{ scale: 1.02, x: 5 }}
-                className="relative group bg-[#17171f] border border-white/10 p-8 md:p-10 transition-all hover:border-[#c1272d]/50 overflow-hidden"
-                style={{ clipPath: clipCard }}
-              >
-                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-15 transform translate-x-1/2 -translate-y-1/2 scale-50 group-hover:scale-100 transition-all duration-500 pointer-events-none">
-                  <GiSpiderWeb size={250} className="text-[#c1272d]" />
-                </div>
-
-                <div className="flex flex-wrap justify-between items-baseline mb-2">
-                  <h3
-                    className="text-2xl text-[#eae7e2]"
-                    style={{ fontFamily: "var(--font-display)" }}
-                  >
-                    Freelance Fullstack Developer
-                  </h3>
-                  <span className="text-[#8b8b93] text-sm tracking-wider">
-                    Jun 2026
-                  </span>
-                </div>
-                <p className="text-[#c1272d] text-sm italic mb-5 tracking-wide">
-                  Client: Manjushree Clinic —{" "}
-                  <a
-                    href="https://manjushreeayurvediccenter.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-[#eae7e2]"
-                  >
-                    manjushreeayurvediccenter.com
-                  </a>
-                </p>
-                <ul className="text-[#c8c6c1] space-y-3 list-disc list-inside text-sm leading-relaxed">
-                  <li>
-                    Independently designed, built, and deployed a full
-                    production website with a public site and private admin
-                    panel
-                  </li>
-                  <li>
-                    Built the admin panel with complete CRUD for doctors and
-                    appointments
-                  </li>
-                  <li>
-                    Used TypeScript, Next.js, Express.js, Prisma ORM, and
-                    PostgreSQL end-to-end; handled deployment and delivery solo
-                  </li>
-                </ul>
-              </motion.div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Projects */}
-      <section id="projects" className="py-32 border-t border-white/10 px-6">
+      <section
+        id="projects"
+        className="py-28 border-t border-[var(--border)] px-6"
+      >
         <div className="max-w-6xl mx-auto">
+          <motion.p
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="text-sm tracking-widest uppercase text-[var(--accent-3)] mb-3"
+          >
+            Selected work
+          </motion.p>
           <motion.h2
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-5xl mb-14 text-[#c1272d]"
+            className="text-4xl md:text-5xl mb-14"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Projects
@@ -657,97 +1168,122 @@ export default function Home() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="grid md:grid-cols-2 gap-8"
+            className="grid md:grid-cols-2 gap-6"
           >
-            {[
-              {
-                title: "Manjushree Clinic",
-                desc: "Full production website + admin dashboard for a healthcare clinic client — public site, appointment booking, admin CRUD for doctors and appointments.",
-                stack: "Next.js · Express.js · Prisma · PostgreSQL",
-                live: "https://manjushreeayurvediccenter.com/",
-                github: null as string | null,
-              },
-              {
-                title: "Campus Mate",
-                desc: "Student management system web app for handling student records and administrative workflows.",
-                stack: "TypeScript",
-                live: null as string | null,
-                github: "https://github.com/TejendraDharikar/campusMate",
-              },
-              {
-                title: "Chautari",
-                desc: "Mini social media platform with a feed and user interaction features.",
-                stack: "TypeScript",
-                live: null as string | null,
-                github: "https://github.com/TejendraDharikar/chautari",
-              },
-              {
-                title: "UniHub",
-                desc: "Platform for university students to collaborate and share resources.",
-                stack: "TypeScript",
-                live: null as string | null,
-                github: null as string | null,
-              },
-            ].map((proj) => (
-              <motion.div
-                key={proj.title}
-                variants={swingIn}
-                whileHover={{ scale: 1.02, rotateZ: 1, y: -4 }}
-                className="relative group bg-[#17171f] border border-white/10 p-8 transition-shadow hover:shadow-[0_0_30px_-8px_rgba(193,39,45,0.5)] overflow-hidden"
-                style={{ clipPath: clipCard }}
-              >
-                <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-20 transform translate-x-1/2 -translate-y-1/2 scale-50 group-hover:scale-100 transition-all duration-500 pointer-events-none">
-                  <GiSpiderWeb size={200} className="text-[#c1272d]" />
-                </div>
-                <h3
-                  className="text-2xl mb-3"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  {proj.title}
-                </h3>
-                <p className="text-[#c8c6c1] mb-4 leading-relaxed">
-                  {proj.desc}
-                </p>
-                <p className="text-xs text-[#8b8b93] mb-5 tracking-wide">
-                  {proj.stack}
-                </p>
-                <div className="flex gap-5">
-                  {proj.live && (
-                    <a
-                      href={proj.live}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#c1272d] hover:text-[#eae7e2] text-sm flex items-center gap-1.5 transition-colors"
+            {projects.map((proj, i) => {
+              const tints: AccentTint[] = ["accent", "accent-2", "accent-3"];
+              const tint = tints[i % tints.length];
+              return (
+                <motion.div key={proj.title} variants={riseIn}>
+                  <GradientBorder tint={tint} className="h-full">
+                    <SpotlightCard
+                      tint={tint}
+                      whileHover={{ y: -4 }}
+                      className={`${cardBase} overflow-hidden h-full flex flex-col`}
                     >
-                      Live site <FaExternalLinkAlt size={11} />
-                    </a>
-                  )}
-                  {proj.github && (
-                    <a
-                      href={proj.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#c1272d] hover:text-[#eae7e2] text-sm flex items-center gap-1.5 transition-colors"
-                    >
-                      GitHub <FaGithub size={13} />
-                    </a>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                      <div
+                        className="h-28 w-full flex items-center px-8"
+                        style={{
+                          backgroundImage: `linear-gradient(135deg, var(--${tint}-soft), transparent 70%), repeating-linear-gradient(135deg, var(--border) 0 1px, transparent 1px 14px)`,
+                        }}
+                      >
+                        <span
+                          className="text-5xl opacity-30 bg-clip-text text-transparent"
+                          style={{
+                            fontFamily: "var(--font-display)",
+                            backgroundImage: tintGradient[tint],
+                          }}
+                        >
+                          0{i + 1}
+                        </span>
+                      </div>
+                      <div className="p-8 flex flex-col flex-1">
+                        <h3
+                          className="text-2xl mb-3"
+                          style={{ fontFamily: "var(--font-display)" }}
+                        >
+                          {proj.title}
+                        </h3>
+                        <p className="text-[var(--text-secondary)] mb-5 leading-relaxed text-sm">
+                          {proj.desc}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-6">
+                          {proj.stack.map((tech) => {
+                            const meta = techIconMap[tech];
+                            return meta ? (
+                              <TechChip
+                                key={tech}
+                                name={tech}
+                                icon={meta.icon}
+                                color={meta.color}
+                                fill={meta.fill}
+                                className="px-2.5 py-1 text-[11px] text-[var(--text-muted)] tracking-wide"
+                              />
+                            ) : (
+                              <span
+                                key={tech}
+                                className="px-2.5 py-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] text-[11px] text-[var(--text-muted)] tracking-wide"
+                              >
+                                {tech}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <div className="flex gap-5 mt-auto">
+                          {proj.live && (
+                            <a
+                              href={proj.live}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-[var(--text)] text-sm flex items-center gap-1.5 transition-colors"
+                              style={{ color: `var(--${tint})` }}
+                            >
+                              Live site <FaExternalLinkAlt size={11} />
+                            </a>
+                          )}
+                          {proj.github && (
+                            <a
+                              href={proj.github}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-[var(--text)] text-sm flex items-center gap-1.5 transition-colors"
+                              style={{ color: `var(--${tint})` }}
+                            >
+                              GitHub <FaGithub size={13} />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </SpotlightCard>
+                  </GradientBorder>
+                </motion.div>
+              );
+            })}
           </motion.div>
         </div>
       </section>
 
       {/* Contact */}
-      <section id="contact" className="py-32 border-t border-white/10 px-6">
+      <section
+        id="contact"
+        className="py-28 border-t border-[var(--border)] px-6"
+      >
         <div className="max-w-3xl mx-auto text-left">
+          <motion.p
+            variants={fadeInUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="text-sm tracking-widest uppercase text-[var(--accent)] mb-3"
+          >
+            Get in touch
+          </motion.p>
           <motion.h2
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-5xl mb-6 text-[#c1272d]"
+            className="text-4xl md:text-5xl mb-6"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Contact
@@ -757,61 +1293,88 @@ export default function Home() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-lg text-[#c8c6c1] mb-8"
+            className="text-lg text-[var(--text-secondary)] mb-8"
           >
             Open to remote fullstack and backend roles. Reach out.
           </motion.p>
 
-          <motion.a
+          <motion.div
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            href="/resume.pdf"
-            download
-            className="inline-flex items-center gap-2 mb-10 px-7 py-3 border border-[#c1272d] text-[#eae7e2] hover:bg-[#c1272d] transition-colors"
           >
-            <FaFileDownload /> Download resume
-          </motion.a>
+            <Magnetic
+              href="/resume.pdf"
+              download
+              className="group relative inline-flex items-center gap-2 mb-10 px-7 py-3 rounded-full text-white font-medium overflow-hidden"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, var(--accent), var(--accent-2) 55%, var(--accent-3))",
+                boxShadow: "0 8px 30px -10px var(--accent-soft-strong)",
+              }}
+            >
+              <span className="shimmer-sweep pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+              <span className="relative z-10 inline-flex items-center gap-2">
+                <FaFileDownload /> Download resume
+              </span>
+            </Magnetic>
+          </motion.div>
 
           <motion.div
             variants={stagger}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="flex gap-6"
+            className="flex gap-4"
           >
             <motion.a
               variants={fadeInUp}
+              whileHover={{ y: -3 }}
               href="mailto:tejendradharikar@gmail.com"
-              className="p-3 border border-white/15 hover:border-[#c1272d] hover:text-[#c1272d] transition-colors"
+              aria-label="Email"
+              className="p-3 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] backdrop-blur-md hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
             >
-              <FaEnvelope size={22} />
+              <FaEnvelope size={20} />
             </motion.a>
             <motion.a
               variants={fadeInUp}
+              whileHover={{ y: -3 }}
               href="https://github.com/TejendraDharikar"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-3 border border-white/15 hover:border-[#c1272d] hover:text-[#c1272d] transition-colors"
+              aria-label="GitHub"
+              className="p-3 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] backdrop-blur-md hover:border-[var(--accent-2)] hover:text-[var(--accent-2)] transition-colors"
             >
-              <FaGithub size={22} />
+              <FaGithub size={20} />
             </motion.a>
             <motion.a
               variants={fadeInUp}
+              whileHover={{ y: -3 }}
               href="https://www.linkedin.com/in/tejendra-dharikar/"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-3 border border-white/15 hover:border-[#c1272d] hover:text-[#c1272d] transition-colors"
+              aria-label="LinkedIn"
+              className="p-3 rounded-full border border-[var(--border-strong)] bg-[var(--surface)] backdrop-blur-md hover:border-[var(--accent-3)] hover:text-[var(--accent-3)] transition-colors"
             >
-              <FaLinkedin size={22} />
+              <FaLinkedin size={20} />
             </motion.a>
           </motion.div>
         </div>
       </section>
 
-      <footer className="py-10 border-t border-white/10 text-center text-[#8b8b93] text-sm">
-        © {new Date().getFullYear()} Tejendra Dharikar
+      <footer className="py-10 border-t border-[var(--border)] px-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-[var(--text-muted)]">
+          <p>© {new Date().getFullYear()} Tejendra Dharikar</p>
+          <p>Built with Next.js, Tailwind CSS &amp; Framer Motion</p>
+          <a
+            href="#me"
+            aria-label="Back to top"
+            className="p-2.5 rounded-full border border-[var(--border-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+          >
+            <FiArrowUp size={16} />
+          </a>
+        </div>
       </footer>
     </div>
   );
